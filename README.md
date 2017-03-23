@@ -3,7 +3,7 @@
 A bot for my discord server.
 
 Uses this api : https://github.com/Rapptz/discord.py for discord access
-
+				https://github.com/Dinnerbone/mcstatus for minecraft server querying
 Currently the bot will do the following:
 
 !help     prints all current commands

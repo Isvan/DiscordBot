@@ -2,10 +2,12 @@ import discord
 import asyncio
 import subprocess
 import pickle
+from mcstatus import MinecraftServer
 
-commands = ["help", "ip", "version", "info", "badCommand","Messages"]
-
+commands = ["help", "ip", "version", "info", "badCommand", "Messages"]
 totalHidden = 3;
+
+MineServer = MinecraftServer.lookup("127.0.0.1:25565")
 
 
 class person:
@@ -14,13 +16,11 @@ class person:
     hiddenFound = 0
 
     def __init__(self):
-        self.commandsNum = [0,0,0,0,0,0]
+        self.commandsNum = [0, 0, 0, 0, 0, 0]
         self.hiddenFound = 0
 
 
-
 client = discord.Client()
-
 
 people = []
 cashedIp = ""
@@ -35,6 +35,7 @@ def checkIfInGame(author):
             return count
 
     return -1
+
 
 def addNewPlayer(author):
     global people
@@ -59,7 +60,9 @@ async def on_ready():
         people = []
         print(str(e))
 
+
 global playerPos
+
 
 @client.event
 async def on_message(message):
@@ -70,7 +73,6 @@ async def on_message(message):
         if playerPos == -1:
             playerPos = addNewPlayer(message.author.name)
             print("Added new player : " + people[playerPos].name)
-
 
         if message.content.startswith('!ip'):
             # await client.send_message(message.channel, 'Currenttly Ip dont work')
@@ -104,9 +106,13 @@ async def on_message(message):
             await client.send_message(message.channel, 'Current Commands : \n !version \n !ip \n !info')
             people[playerPos].commandsNum[0] += 1
 
+        elif message.content.startswith('!server'):
+            status = MineServer.status()
+            await client.send_message(message.channel,"The server has {0} players and replied in {1} ms".format(status.players.online,
+                                                                                        status.latency))
         elif message.content.startswith('!version'):
-            version = 'Server is Currently Running DireWolf20 1.8.1 '
-            version += 'Make sure to update'
+            version = 'Server is Currently Running FTB DireWolf 1.10 Minecraft V 1.7.0 just get a legit minecraft account'
+            version += ' Make sure to downgrade again...'
             await client.send_message(message.channel, version)
             people[playerPos].commandsNum[2] += 1
         elif message.content.startswith('!'):
@@ -116,16 +122,13 @@ async def on_message(message):
         if message.content.startswith('!'):
             pass
             with open('peopleSaveFile', 'wb') as fp:
-                pickle.dump(people, fp)
-
-        people[playerPos].commandsNum[5] += 1
+             pickle.dump(people, fp)
+            people[playerPos].commandsNum[5] += 1
 
     except Exception as e:
         print('Error! ' + str(e))
         # await client.send_message(message.channel, 'ERROR')
         print('Generated from : ' + message.content)
 
-
-		
-tokenFile = open("token", "r") 
+tokenFile = open("token", "r")
 client.run(tokenFile.read())
