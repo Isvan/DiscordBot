@@ -4,8 +4,10 @@ import subprocess
 import pickle
 from mcstatus import MinecraftServer
 
-commands = ["help", "ip", "version", "info", "badCommand", "Messages"]
+commands = ["help", "ip", "version", "info", "badCommand", "Messages","server"]
 totalHidden = 3;
+
+curVersion = 0.1
 
 MineServer = MinecraftServer.lookup("127.0.0.1:25565")
 
@@ -14,10 +16,11 @@ class person:
     name = ""
     commandsNum = []
     hiddenFound = 0
-
+    version = 0
     def __init__(self):
-        self.commandsNum = [0, 0, 0, 0, 0, 0]
+        self.commandsNum = [0, 0, 0, 0, 0, 0,0]
         self.hiddenFound = 0
+        self.version = curVersion
 
 
 client = discord.Client()
@@ -25,6 +28,13 @@ client = discord.Client()
 people = []
 cashedIp = ""
 
+def updatePerson(pos):
+    global people
+    if people[pos].version == curVersion:
+        return
+    while len(people[pos].commandsNum) < len(commands):
+        people[pos].commandsNum.append(0)
+    people[pos].version = curVersion
 
 def checkIfInGame(author):
     count = -1
@@ -32,6 +42,7 @@ def checkIfInGame(author):
     for persons in people:
         count += 1
         if persons.name == author:
+            updatePerson(count)
             return count
 
     return -1
@@ -69,12 +80,14 @@ async def on_message(message):
     global people
     try:
 
+        messageCase = message.content.lower()
+    
         playerPos = checkIfInGame(message.author.name)
         if playerPos == -1:
             playerPos = addNewPlayer(message.author.name)
             print("Added new player : " + people[playerPos].name)
 
-        if message.content.startswith('!ip'):
+        if messageCase.startswith('!ip'):
             # await client.send_message(message.channel, 'Currenttly Ip dont work')
 
             # bash = "curl ipecho.net/plain"
@@ -88,7 +101,7 @@ async def on_message(message):
 
             people[playerPos].commandsNum[1] += 1
 
-        elif message.content.startswith('!info'):
+        elif messageCase.startswith('!info'):
             pp = people[playerPos]
             string = "Player : " + pp.name
             string += " \n !help : " + str(pp.commandsNum[0])
@@ -97,29 +110,60 @@ async def on_message(message):
             string += " \n !info : " + str(pp.commandsNum[3])
             string += " \n !badCommand : " + str(pp.commandsNum[4])
             string += " \n General Chat : " + str(pp.commandsNum[5])
+            string += " \n !server : " + str(pp.commandsNum[6])
             string += " \n hidden Commands used : " + str(pp.hiddenFound) + " / " + str(totalHidden)
+            string += " \n Bot Version : " + str(curVersion)
 
             await client.send_message(message.channel, string)
             people[playerPos].commandsNum[3] += 1
 
-        elif message.content.startswith('!help'):
+        elif messageCase.startswith('!help'):
             await client.send_message(message.channel, 'Current Commands : \n !version \n !ip \n !info')
             people[playerPos].commandsNum[0] += 1
 
-        elif message.content.startswith('!server'):
-            status = MineServer.status()
-            await client.send_message(message.channel,"The server has {0} players and replied in {1} ms".format(status.players.online,
-                                                                                        status.latency))
-        elif message.content.startswith('!version'):
-            version = 'Server is Currently Running FTB DireWolf 1.10 Minecraft V 1.7.0 just get a legit minecraft account'
-            version += ' Make sure to downgrade again...'
+        elif messageCase.startswith('!server'):
+            serverCommand = messageCase.split()
+            string = ""
+            
+            
+            
+            if len(serverCommand) == 1:
+                string = "Needs a sub command :"
+                string += " \n ```<players>``` to see number of players online"
+                string += " \n ```<playerNames>``` to see the name of players online"
+                string += " \n ```<online>``` to see if the server is online"
+            elif serverCommand[1] == "players":
+                try:
+                    status = MineServer.status()
+                    string = "The server has {0} players online".format(status.players.online)
+                except Exception:
+                    string = "Server not online"
+            elif serverCommand[1] == "online":
+                try:
+                    ping = MineServer.ping()
+                    string = "The server has {0} ms ping to bot so prob online".format(ping)
+                except Exception:
+                    string = "Server not online"
+            elif serverCommand[1] == "playernames":
+                try:
+                    query = MineServer.query()
+                    string = "The server has the following players online: ``` {0}".format(", ".join(query.players.names)) + " ```"
+                except Exception:
+                    string = "Server not online"
+            else:
+                string = "Incorrect Sub Command do !server to see all valid"
+                    
+            people[playerPos].commandsNum[6] += 1
+            await client.send_message(message.channel,string)
+        elif messageCase.startswith('!version'):
+            version = 'Server is Currently Running ```FTB DireWolf 1.10 - Minecraft V 1.7.0``` just get a legit minecraft account'
             await client.send_message(message.channel, version)
             people[playerPos].commandsNum[2] += 1
-        elif message.content.startswith('!'):
+        elif messageCase.startswith('!'):
             await client.send_message(message.channel, "Command '" + message.content + "' is not a command dum dum, see !help")
             people[playerPos].commandsNum[4] += 1
 
-        if message.content.startswith('!'):
+        if messageCase.startswith('!'):
             pass
             with open('peopleSaveFile', 'wb') as fp:
              pickle.dump(people, fp)
